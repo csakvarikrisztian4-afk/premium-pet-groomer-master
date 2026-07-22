@@ -1,15 +1,21 @@
-# Premium Pet Groomer Master
+# Premium Pet Groomer Master — Premium Redesign
 
-Reusable, mobile-first static website foundation for Hungarian pet-grooming businesses.
+Reusable, mobile-first static website template for Hungarian pet-grooming businesses.
 
-## Branch model
+## Configuration
 
-- `main`: reconstructed, deployable baseline.
-- `premium-redesign`: design and conversion experiments.
+Edit `assets/js/site-config.js` for:
 
-## Customisation
+- business identity;
+- phone, email and WhatsApp;
+- address, Maps and review links;
+- booking destination;
+- opening hours;
+- review score/count;
+- brand colours;
+- hero, about and gallery images.
 
-Edit `assets/js/site-config.js` for business identity, contact details, map/review/booking links, opening hours, colours and images. Edit `index.html` when a client needs different services, gallery captions, reviews or FAQs.
+The default map intentionally shows a neutral placeholder. Add an exact, verified `mapsSearch` and `mapsEmbed` URL for each real business so the template never displays competing groomers.
 
 ## Preview
 
@@ -21,6 +27,12 @@ Open `http://localhost:8080`.
 
 ## Deployment
 
-Static deployment; no build command is required. Cloudflare Pages can publish the repository root directly.
+Static Cloudflare Pages deployment. No build command is required; publish the repository root.
 
-Before launch, complete `docs/CLIENT-CUSTOMISATION.md`. Never commit credentials, customer data, private spreadsheets, webhook secrets or API keys.
+## Real launch checklist
+
+- Replace all stock photographs with client-owned, permissioned images where possible.
+- Replace every review placeholder with a real, permissioned review.
+- Enter verified contact details and exact Maps URLs.
+- Complete the privacy notice and imprint.
+- Test phone, booking, WhatsApp and map links on a real device.
