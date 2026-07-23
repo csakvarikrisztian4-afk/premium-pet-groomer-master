@@ -1,120 +1,124 @@
-const getConfigValue = (path) => {
-  return path.split('.').reduce((value, key) => value?.[key], window.PET_GROOMER_CONFIG);
-};
+(() => {
+  'use strict';
 
-const applySiteConfig = () => {
-  const config = window.PET_GROOMER_CONFIG;
-  if (!config) return;
+  const config = window.PET_GROOMER_CONFIG || {};
+  const get = (path) => path.split('.').reduce((value, key) => value?.[key], config);
 
-  document.title = config.copy?.pageTitle || config.business?.name || document.title;
+  const applyConfig = () => {
+    document.title = config.copy?.pageTitle || config.business?.name || document.title;
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta && config.copy?.metaDescription) meta.content = config.copy.metaDescription;
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    const ogDescription = document.querySelector('meta[property="og:description"]');
+    if (ogTitle) ogTitle.content = document.title;
+    if (ogDescription && config.copy?.metaDescription) ogDescription.content = config.copy.metaDescription;
 
-  const metaDescription = document.querySelector('meta[name="description"]');
-  if (metaDescription && config.copy?.metaDescription) metaDescription.content = config.copy.metaDescription;
-
-  const ogTitle = document.querySelector('meta[property="og:title"]');
-  if (ogTitle) ogTitle.content = document.title;
-  const ogDescription = document.querySelector('meta[property="og:description"]');
-  if (ogDescription && config.copy?.metaDescription) ogDescription.content = config.copy.metaDescription;
-
-  const root = document.documentElement;
-  const themeMap = {
-    primary: '--brand-primary',
-    primaryDark: '--brand-primary-dark',
-    accent: '--brand-accent',
-    cream: '--brand-cream',
-    ink: '--brand-ink'
-  };
-  Object.entries(themeMap).forEach(([key, cssVariable]) => {
-    if (config.theme?.[key]) root.style.setProperty(cssVariable, config.theme[key]);
-  });
-
-  document.querySelectorAll('[data-bind]').forEach((element) => {
-    const value = getConfigValue(element.dataset.bind);
-    if (value !== undefined && value !== null) element.textContent = value;
-  });
-
-  document.querySelectorAll('[data-bind-attr]').forEach((element) => {
-    const [attribute, path] = element.dataset.bindAttr.split(':');
-    const value = getConfigValue(path);
-    if (attribute && value) element.setAttribute(attribute, value);
-  });
-
-  const linkValues = {
-    phone: config.contact?.phoneHref ? `tel:${config.contact.phoneHref}` : '',
-    whatsapp: config.contact?.whatsappHref || '',
-    mapsSearch: config.links?.mapsSearch || '',
-    reviews: config.links?.reviews || config.links?.mapsSearch || '',
-    booking: config.links?.booking || '#kapcsolat'
-  };
-  document.querySelectorAll('[data-link]').forEach((element) => {
-    const href = linkValues[element.dataset.link];
-    if (href) element.setAttribute('href', href);
-  });
-
-  document.querySelectorAll('[data-image]').forEach((image) => {
-    const path = image.dataset.image;
-    const source = getConfigValue(`images.${path}`);
-    if (source) image.setAttribute('src', source);
-  });
-
-  const map = document.querySelector('[data-map-embed]');
-  if (map && config.links?.mapsEmbed) map.setAttribute('src', config.links.mapsEmbed);
-
-  const bookingForm = document.querySelector('#bookingForm');
-  if (bookingForm) {
-    bookingForm.dataset.delivery = config.form?.delivery || 'email';
-    bookingForm.dataset.email = config.contact?.email || '';
-    bookingForm.dataset.whatsapp = config.contact?.whatsappHref || '';
-  }
-};
-
-window.addEventListener('DOMContentLoaded', () => {
-  applySiteConfig();
-
-  const nav = document.querySelector('#mainNav');
-  const shrink = () => nav?.classList.toggle('navbar-shrink', window.scrollY > 15);
-  shrink();
-  document.addEventListener('scroll', shrink, { passive: true });
-
-  const toggler = document.querySelector('.navbar-toggler');
-  document.querySelectorAll('#navbarResponsive .nav-link').forEach((link) => {
-    link.addEventListener('click', () => {
-      if (toggler && getComputedStyle(toggler).display !== 'none') toggler.click();
+    const themeMap = {green:'--green',greenDeep:'--green-deep',cream:'--cream',accent:'--accent',ink:'--ink'};
+    Object.entries(themeMap).forEach(([key, variable]) => {
+      if (config.theme?.[key]) document.documentElement.style.setProperty(variable, config.theme[key]);
     });
-  });
 
-  const year = document.querySelector('#year');
-  if (year) year.textContent = new Date().getFullYear();
+    document.querySelectorAll('[data-bind]').forEach((element) => {
+      const value = get(element.dataset.bind);
+      if (value !== undefined && value !== null) element.textContent = value;
+    });
+    document.querySelectorAll('[data-bind-attr]').forEach((element) => {
+      const [attribute, path] = element.dataset.bindAttr.split(':');
+      const value = get(path);
+      if (attribute && value) element.setAttribute(attribute, value);
+    });
 
-  const bookingForm = document.querySelector('#bookingForm');
-  if (!bookingForm) return;
+    const hrefs = {
+      phone: config.contact?.phoneHref ? `tel:${config.contact.phoneHref}` : '',
+      whatsapp: config.contact?.whatsappHref || '',
+      mapsSearch: config.links?.mapsSearch || '',
+      reviews: config.links?.reviews || '#velemenyek',
+      booking: config.links?.booking || '#kapcsolat'
+    };
+    document.querySelectorAll('[data-link]').forEach((element) => {
+      const href = hrefs[element.dataset.link];
+      if (href) element.setAttribute('href', href);
+      if (element.dataset.link === 'mapsSearch' && !href) {
+        element.setAttribute('href', '#terkep');
+        element.removeAttribute('target');
+      }
+    });
+    document.querySelectorAll('[data-image]').forEach((image) => {
+      const source = get(`images.${image.dataset.image}`);
+      if (source) image.src = source;
+    });
 
-  bookingForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    if (!bookingForm.checkValidity()) {
-      bookingForm.reportValidity();
-      return;
+    const map = document.querySelector('[data-map-embed]');
+    const placeholder = document.querySelector('.map-placeholder');
+    if (map && config.links?.mapsEmbed) {
+      map.src = config.links.mapsEmbed;
+      if (placeholder) placeholder.hidden = true;
+    } else if (map) {
+      map.hidden = true;
+      if (placeholder) placeholder.hidden = false;
     }
 
-    const data = new FormData(bookingForm);
-    const text = [
-      'Új időpontkérés a weboldalról',
-      `Név: ${data.get('name') || ''}`,
-      `Telefon: ${data.get('phone') || ''}`,
-      `Kutya: ${data.get('dog') || ''}`,
-      `Üzenet: ${data.get('message') || ''}`
-    ].join('\n');
-
-    const delivery = bookingForm.dataset.delivery;
-    const whatsapp = bookingForm.dataset.whatsapp;
-    const email = bookingForm.dataset.email;
-
-    if (delivery === 'whatsapp' && whatsapp) {
-      const separator = whatsapp.includes('?') ? '&' : '?';
-      window.open(`${whatsapp}${separator}text=${encodeURIComponent(text)}`, '_blank', 'noopener');
-      return;
+    const form = document.querySelector('#bookingForm');
+    if (form) {
+      form.dataset.delivery = config.form?.delivery || 'email';
+      form.dataset.email = config.contact?.email || '';
+      form.dataset.whatsapp = config.contact?.whatsappHref || '';
     }
+  };
 
-    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent('Időpontkérés kutyakozmetikába')}&body=${encodeURIComponent(text)}`;
+  const setupMenu = () => {
+    const button = document.querySelector('.menu-button');
+    const menu = document.querySelector('#mobileMenu');
+    if (!button || !menu) return;
+    const close = () => { menu.hidden = true; button.setAttribute('aria-expanded','false'); };
+    button.addEventListener('click', () => {
+      const open = button.getAttribute('aria-expanded') === 'true';
+      menu.hidden = open;
+      button.setAttribute('aria-expanded', String(!open));
+    });
+    menu.querySelectorAll('a').forEach((link) => link.addEventListener('click', close));
+    window.addEventListener('resize', () => { if (window.innerWidth > 900) close(); });
+  };
+
+  const setupDialogs = () => {
+    document.querySelectorAll('[data-dialog-open]').forEach((button) => {
+      button.addEventListener('click', () => document.getElementById(button.dataset.dialogOpen)?.showModal());
+    });
+    document.querySelectorAll('[data-dialog-close]').forEach((button) => {
+      button.addEventListener('click', () => button.closest('dialog')?.close());
+    });
+    document.querySelectorAll('dialog').forEach((dialog) => {
+      dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+    });
+  };
+
+  const setupForm = () => {
+    const form = document.querySelector('#bookingForm');
+    if (!form) return;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+      const data = new FormData(form);
+      const text = ['Új időpontkérés a weboldalról',`Név: ${data.get('name') || ''}`,`Telefon: ${data.get('phone') || ''}`,`Kutya: ${data.get('dog') || ''}`,`Üzenet: ${data.get('message') || ''}`].join('\n');
+      if (form.dataset.delivery === 'whatsapp' && form.dataset.whatsapp) {
+        const separator = form.dataset.whatsapp.includes('?') ? '&' : '?';
+        window.open(`${form.dataset.whatsapp}${separator}text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+      } else if (form.dataset.email) {
+        window.location.href = `mailto:${encodeURIComponent(form.dataset.email)}?subject=${encodeURIComponent('Időpontkérés kutyakozmetikába')}&body=${encodeURIComponent(text)}`;
+      }
+    });
+  };
+
+  window.addEventListener('DOMContentLoaded', () => {
+    applyConfig();
+    setupMenu();
+    setupDialogs();
+    setupForm();
+    const year = document.querySelector('#year');
+    if (year) year.textContent = new Date().getFullYear();
+    const header = document.querySelector('.site-header');
+    const updateHeader = () => header?.classList.toggle('is-scrolled', window.scrollY > 12);
+    updateHeader();
+    window.addEventListener('scroll', updateHeader, {passive:true});
   });
-});
+})();
